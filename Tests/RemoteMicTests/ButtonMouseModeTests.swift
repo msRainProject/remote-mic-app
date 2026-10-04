@@ -75,6 +75,190 @@ struct ButtonMouseModeTests {
         #expect(h.actions.isEmpty)
     }
 
+    @Test(arguments: [RemoteButton.volumeUp, .volumeDown])
+    func scrollIsImmediateRepeatsAndStopsWithoutVolumeOrGestures(_ button: RemoteButton) throws {
+        let h = try MouseModeHarness()
+        h.settings.setAction(.commandCopy, for: button, trigger: .doubleClick)
+        h.settings.setAction(.commandPaste, for: button, trigger: .longPress)
+        h.toggle()
+        let scroll = AppleSiriRemoteTouchOutput.scroll(pixels: button == .volumeUp ? 40 : -40)
+        h.report([button]); h.report([button])
+        #expect(h.outputs == [scroll])
+        h.scheduler.advance(by: 349)
+        #expect(h.outputs == [scroll])
+        h.scheduler.advance(by: 1)
+        #expect(h.outputs == [scroll, scroll])
+        h.scheduler.advance(by: 1_650)
+        #expect(h.outputs == Array(repeating: scroll, count: 18))
+        h.report([])
+        h.scheduler.advance(by: 1_000)
+        #expect(h.outputs.count == 18)
+        #expect(h.scheduler.pendingCount == 0)
+        #expect(h.actions.isEmpty)
+        #expect(h.settings.action(for: button) == (button == .volumeUp ? .volumeUp : .volumeDown))
+        #expect(h.settings.configuredAction(for: button, trigger: .doubleClick).action == .commandCopy)
+        #expect(h.settings.configuredAction(for: button, trigger: .longPress).action == .commandPaste)
+    }
+
+    @Test func oppositeScrollKeysPauseAndReleaseResumesRemainingKey() throws {
+        let h = try MouseModeHarness()
+        h.toggle(); h.report([.volumeUp]); h.report([.volumeUp, .volumeDown])
+        #expect(h.outputs == [.scroll(pixels: 40)])
+        h.scheduler.advance(by: 650)
+        #expect(h.outputs.count == 1)
+        h.report([.volumeDown])
+        #expect(h.outputs.last == .scroll(pixels: -40))
+        h.scheduler.advance(by: 100)
+        #expect(h.outputs.count == 3)
+        h.report([])
+        #expect(h.scheduler.pendingCount == 0)
+    }
+
+    @Test func scrollingAndMovementHaveIndependentRepeatLifecycles() throws {
+        let h = try MouseModeHarness()
+        h.toggle(); h.report([.volumeUp]); h.report([.volumeUp, .right])
+        h.scheduler.advance(by: 350)
+        #expect(h.outputs.filter { if case .scroll = $0 { true } else { false } }.count == 2)
+        h.report([.volumeUp])
+        h.scheduler.advance(by: 100)
+        #expect(h.outputs.last == .scroll(pixels: 40))
+        h.report([.volumeUp, .right]); h.report([.right])
+        let scrollCount = h.outputs.filter { if case .scroll = $0 { true } else { false } }.count
+        h.scheduler.advance(by: 100)
+        #expect(h.outputs.filter { if case .scroll = $0 { true } else { false } }.count == scrollCount)
+        #expect(h.outputs.last == .move(deltaX: 4.8, deltaY: 0))
+        h.report([])
+        #expect(h.scheduler.pendingCount == 0)
+    }
+
+    @Test(arguments: ["user_toggle", "configuration", "runtime_action", "suspension", "stop", "disconnect"])
+    func scrollCancellationRejectsLateFramesAndOldVolumeRelease(_ reason: String) throws {
+        let h = try MouseModeHarness()
+        h.toggle(); h.report([.volumeUp])
+        let stale = h.scheduler.lastRepeatingAction
+        switch reason {
+        case "user_toggle":
+            h.report([.volumeUp, .menu]); h.scheduler.advance(by: 550); h.report([.volumeUp])
+        case "configuration": h.monitor.cancelMappingInteractions()
+        case "runtime_action": h.monitor.cancelPendingButtonActions()
+        case "suspension": h.monitor.cancelMouseMode(reason: "application_suspended")
+        case "disconnect": h.monitor.disconnectSimulatedDevice()
+        default: h.monitor.stop()
+        }
+        let count = h.outputs.count
+        stale?(); h.scheduler.advance(by: 1_000); h.report([])
+        #expect(!h.monitor.isMouseModeEnabled)
+        #expect(h.outputs.count == count)
+        #expect(h.scheduler.pendingCount == 0)
+        #expect(h.actions.isEmpty)
+        if reason == "disconnect" {
+            h.monitor.connectSimulatedDevice(fingerprint: "fixture", profileID: h.profileID)
+        }
+        h.report([.volumeUp]); h.report([])
+        #expect(h.actions == [.volumeUp])
+    }
+
+    @Test func scrollPermissionAndOutputFailuresCancelAndRecover() throws {
+        let h = try MouseModeHarness()
+        h.toggle(); h.report([.volumeDown]); h.permissionsGranted = false
+        h.scheduler.advance(by: 350)
+        #expect(!h.monitor.isMouseModeEnabled)
+        #expect(h.scheduler.pendingCount == 0)
+        h.report([]); h.permissionsGranted = true; h.toggle()
+        h.acceptOutput = false; h.report([.volumeUp])
+        #expect(!h.monitor.isMouseModeEnabled)
+        #expect(h.scheduler.pendingCount == 0)
+        let failed = h.logs.filter { $0.hasPrefix("MOUSE SCROLL") && $0.contains("result=failed") }
+        #expect(failed.count == 1)
+        #expect(failed.first?.contains("submitted_frames=0") == true)
+        h.report([]); h.acceptOutput = true; h.toggle(); h.report([.volumeUp])
+        #expect(h.outputs.last == .scroll(pixels: 40))
+    }
+
+    @Test func volumeGesturesAndRepeatRestoreAfterMouseMode() throws {
+        let h = try MouseModeHarness()
+        h.settings.setAction(.commandCopy, for: .volumeUp, trigger: .doubleClick)
+        h.settings.setAction(.commandPaste, for: .volumeUp, trigger: .longPress)
+        h.toggle(); h.report([.volumeUp]); h.report([]); h.toggle()
+        h.report([.volumeUp]); h.report([])
+        h.scheduler.advance(by: 100)
+        h.report([.volumeUp]); h.report([])
+        #expect(h.actions == [.commandCopy])
+        h.report([.volumeUp]); h.scheduler.advance(by: 550); h.report([])
+        #expect(h.actions == [.commandCopy, .commandPaste])
+        h.report([.volumeDown]); h.scheduler.advance(by: 350); h.report([])
+        #expect(h.actions.suffix(2) == [.volumeDown, .volumeDown])
+        #expect(h.scheduler.pendingCount == 0)
+    }
+
+    @Test func pendingVolumeGestureIsCancelledWhenEnteringMouseMode() throws {
+        let h = try MouseModeHarness()
+        h.settings.setAction(.commandCopy, for: .volumeUp, trigger: .doubleClick)
+        h.report([.volumeUp]); h.report([.volumeUp, .menu])
+        h.scheduler.advance(by: 550); h.report([]); h.scheduler.advance(by: 600)
+        #expect(h.actions.isEmpty)
+        #expect(h.outputs.isEmpty)
+    }
+
+    @Test func volumeButtonsCannotBecomeAnUnreachableExitBinding() throws {
+        let h = try MouseModeHarness(bindToggle: false)
+        h.settings.setAction(.toggleMouseMode, for: .volumeUp)
+        h.report([.volumeUp]); h.report([])
+        #expect(!h.monitor.isMouseModeEnabled)
+        #expect(h.logs.contains { $0.contains("reason=mouse_mode_reserved_button") })
+    }
+
+    @Test func scrollLogsHaveOneCorrelatedTerminalAndNoCoordinates() throws {
+        let h = try MouseModeHarness()
+        h.toggle(); h.report([.volumeUp]); h.scheduler.advance(by: 550); h.report([])
+        let scroll = h.logs.filter { $0.hasPrefix("MOUSE SCROLL") }
+        #expect(scroll.count == 3)
+        #expect(scroll.filter { $0.contains("phase=completed") }.count == 1)
+        #expect(Set(scroll.compactMap { $0.split(separator: " ").first { $0.hasPrefix("operation_id=") } }).count == 1)
+        #expect(scroll.last?.contains("submitted_frames=4") == true)
+        #expect(scroll.last?.contains("target_result=unknown") == true)
+        #expect(!scroll.joined().contains("pixels="))
+        #expect(!h.logs.joined().contains("fixture"))
+        #expect(!h.logs.joined().contains(h.profileID.uuidString))
+    }
+
+    @Test(arguments: [RemoteButton.volumeUp, .volumeDown])
+    func nativeVolumeEventsAreSuppressedAndOriginalActionRestoresAfterMode(_ button: RemoteButton) throws {
+        let h = try MouseModeHarness(isSeized: false)
+        func event(_ pressed: Bool) throws -> CGEvent {
+            let systemKey = button == .volumeUp ? 0 : 1
+            let keyState = pressed ? 0xA : 0xB
+            return try #require(NSEvent.otherEvent(with: .systemDefined, location: .zero,
+                modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                windowNumber: 0, context: nil, subtype: 8,
+                data1: (systemKey << 16) | (keyState << 8), data2: -1)?.cgEvent)
+        }
+        let type = try #require(CGEventType(rawValue: 14))
+        h.toggle(); h.report([button])
+        #expect(h.suppressor.handle(type: type, event: try event(true)))
+        #expect(h.suppressor.handle(type: type, event: try event(true)))
+        h.report([])
+        #expect(h.suppressor.handle(type: type, event: try event(false)))
+        h.toggle(); h.report([button])
+        // Ordinary mode also filters native volume to avoid doubling its mapped output.
+        #expect(h.suppressor.handle(type: type, event: try event(true)))
+        h.report([])
+        #expect(h.suppressor.handle(type: type, event: try event(false)))
+        #expect(h.actions == [button == .volumeUp ? .volumeUp : .volumeDown])
+        #expect(h.outputs == [.scroll(pixels: button == .volumeUp ? 40 : -40)])
+    }
+
+    @Test func twoDevicesKeepIndependentScrollSessions() throws {
+        let a = try MouseModeHarness(), b = try MouseModeHarness()
+        a.toggle(); b.toggle(); a.report([.volumeUp]); b.report([.volumeDown])
+        a.monitor.disconnectSimulatedDevice(); b.scheduler.advance(by: 550)
+        #expect(!a.monitor.isMouseModeEnabled)
+        #expect(b.monitor.isMouseModeEnabled)
+        #expect(b.outputs == Array(repeating: .scroll(pixels: -40), count: 4))
+        b.report([])
+        #expect(b.scheduler.pendingCount == 0)
+    }
+
     @Test func directionReplacementAndDiagonalSpeedAreBounded() throws {
         let h = try MouseModeHarness()
         h.toggle()

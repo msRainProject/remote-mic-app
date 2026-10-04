@@ -2,8 +2,12 @@ import Foundation
 
 /// One transient mouse session per Xiaomi HID monitor; never changes stored mappings.
 final class ButtonMouseModeController {
-    static let controlledButtons: Set<RemoteButton> = [.up, .down, .left, .right, .ok]
+    static let scrollButtons: Set<RemoteButton> = [.volumeUp, .volumeDown]
+    static let controlledButtons = Set<RemoteButton>([.up, .down, .left, .right, .ok]).union(scrollButtons)
     static let frameMilliseconds: UInt64 = 16
+    static let scrollRepeatDelayMilliseconds: UInt64 = 350
+    static let scrollRepeatMilliseconds: UInt64 = 100
+    static let scrollPixels = 40.0
 
     private let scheduler: HIDRemoteScheduling
     private let permissions: () -> Bool
@@ -11,6 +15,10 @@ final class ButtonMouseModeController {
     private let logger: (String) -> Void
     private var movementTask: HIDRemoteScheduledTask?
     private var heldDirections: Set<RemoteButton> = []
+    private var scrollTask: HIDRemoteScheduledTask?
+    private var heldScrollButtons: Set<RemoteButton> = []
+    private var scrollGeneration: UInt64 = 0
+    private var scrollActive = false
     private var generation: UInt64 = 0
     private var movementActive = false
     // Shared process-local sequence: simultaneous devices must not reuse log operation IDs.
@@ -28,6 +36,9 @@ final class ButtonMouseModeController {
     private var modeOperationID: UInt64 = 0
     private var movementOperationID: UInt64 = 0
     private var clickOperationID: UInt64 = 0
+    private var scrollOperationID: UInt64 = 0
+    private var scrollStartedAt = 0.0
+    private var submittedScrollFrames = 0
     private var movementStartedAt = 0.0
     private var movementFrames = 0
     private var submittedFrames = 0
@@ -43,7 +54,7 @@ final class ButtonMouseModeController {
         self.logger = logger
     }
 
-    deinit { movementTask?.cancel() }
+    deinit { movementTask?.cancel(); scrollTask?.cancel() }
 
     func toggle() {
         if isEnabled {
@@ -65,6 +76,10 @@ final class ButtonMouseModeController {
     func press(_ button: RemoteButton) {
         guard isEnabled, Self.controlledButtons.contains(button) else { return }
         guard permissions() else { cancel(reason: "permission_revoked"); return }
+        if Self.scrollButtons.contains(button) {
+            pressScroll(button)
+            return
+        }
         if button == .ok {
             clickOperationID = Self.operations.take()
             let submitted = output(.click)
@@ -98,13 +113,21 @@ final class ButtonMouseModeController {
     }
 
     func release(_ button: RemoteButton) {
+        if Self.scrollButtons.contains(button) {
+            guard heldScrollButtons.remove(button) != nil else { return }
+            if heldScrollButtons.isEmpty { stopScroll(reason: "released") }
+            else { scrollStep() }
+            return
+        }
         heldDirections.remove(button)
         if heldDirections.isEmpty { stopMovement(reason: "released") }
     }
 
     func cancel(reason: String) {
         stopMovement(reason: reason)
+        stopScroll(reason: reason)
         heldDirections.removeAll()
+        heldScrollButtons.removeAll()
         guard isEnabled else { return }
         isEnabled = false
         generation += 1
@@ -146,8 +169,66 @@ final class ButtonMouseModeController {
         movementFrames = 0
     }
 
+    private func pressScroll(_ button: RemoteButton) {
+        guard heldScrollButtons.insert(button).inserted else { return }
+        if scrollTask == nil {
+            scrollGeneration += 1
+            scrollOperationID = Self.operations.take()
+            scrollActive = true
+            scrollStartedAt = ProcessInfo.processInfo.systemUptime
+            submittedScrollFrames = 0
+            log("SCROLL", phase: "started", result: "accepted", reason: "scroll_pressed",
+                fields: "repeat_delay_ms=\(Self.scrollRepeatDelayMilliseconds) repeat_interval_ms=\(Self.scrollRepeatMilliseconds)")
+            scrollStep()
+            guard isEnabled, !heldScrollButtons.isEmpty else { return }
+            // Independent generation lets pointer movement and scrolling coexist.
+            let expectedGeneration = scrollGeneration
+            scrollTask = scheduler.schedule(afterMilliseconds: Self.scrollRepeatDelayMilliseconds,
+                repeatingEveryMilliseconds: Self.scrollRepeatMilliseconds) { [weak self] in
+                guard let self, self.isEnabled, self.scrollGeneration == expectedGeneration else { return }
+                self.scrollStep()
+            }
+        } else {
+            scrollStep()
+        }
+    }
+
+    private func scrollStep() {
+        guard isEnabled, !heldScrollButtons.isEmpty else { return }
+        guard permissions() else { cancel(reason: "permission_revoked"); return }
+        let direction = (heldScrollButtons.contains(.volumeUp) ? 1.0 : 0.0) -
+            (heldScrollButtons.contains(.volumeDown) ? 1.0 : 0.0)
+        guard direction != 0 else { return }
+        guard output(.scroll(pixels: direction * Self.scrollPixels)) else {
+            cancel(reason: "output_rejected")
+            return
+        }
+        if submittedScrollFrames == 0 {
+            log("SCROLL", phase: "submitted", result: "submitted", reason: "first_input_posted",
+                fields: "first_output_ms=\(Int((ProcessInfo.processInfo.systemUptime - scrollStartedAt) * 1000)) target_result=unknown")
+        }
+        submittedScrollFrames += 1
+    }
+
+    private func stopScroll(reason: String) {
+        guard scrollActive else { return }
+        scrollTask?.cancel()
+        scrollTask = nil
+        scrollActive = false
+        scrollGeneration += 1
+        log("SCROLL", phase: "completed", result: reason == "output_rejected" ? "failed" : "stopped", reason: reason,
+            fields: "submitted_frames=\(submittedScrollFrames) elapsed_ms=\(Int((ProcessInfo.processInfo.systemUptime - scrollStartedAt) * 1000)) target_result=unknown")
+        submittedScrollFrames = 0
+    }
+
     private func log(_ action: String, phase: String, result: String, reason: String, fields: String = "") {
-        let operationID = action == "MODE" ? modeOperationID : (action == "MOVE" ? movementOperationID : clickOperationID)
+        let operationID: UInt64
+        switch action {
+        case "MODE": operationID = modeOperationID
+        case "MOVE": operationID = movementOperationID
+        case "SCROLL": operationID = scrollOperationID
+        default: operationID = clickOperationID
+        }
         logger("MOUSE \(action) operation_id=mouse_\(operationID) phase=\(phase) result=\(result) reason=\(reason)" +
             (fields.isEmpty ? "" : " \(fields)"))
     }
