@@ -53,7 +53,9 @@ enum SettingsScreenshotRenderer {
         let opensActionEditor = ProcessInfo.processInfo.environment[
             "REMOTE_MIC_SETTINGS_SCREENSHOT_OPEN_ACTION_EDITOR"
         ] == "1"
-        let opensMappingEditor = opensShortcutEditor || opensActionEditor
+        let mouseModeState = ProcessInfo.processInfo.environment["REMOTE_MIC_SETTINGS_SCREENSHOT_MOUSE_MODE"]
+        let opensMouseModeEditor = mouseModeState == "editor"
+        let opensMappingEditor = opensShortcutEditor || opensActionEditor || opensMouseModeEditor
         let showsStandardKeyboard = ProcessInfo.processInfo.environment[
             "REMOTE_MIC_SETTINGS_SCREENSHOT_SHORTCUT_MODE"
         ] == "keyboard"
@@ -144,6 +146,10 @@ enum SettingsScreenshotRenderer {
                 trigger: .singleClick
             )
         }
+        if mouseModeState != nil {
+            settings.customMappingEnabled = true
+            settings.setAction(.toggleMouseMode, for: .menu, trigger: .longPress)
+        }
         seedStatisticsForScreenshot(settings)
         let historyDirectory = outputDirectory.appendingPathComponent(UUID().uuidString)
         let model = BridgeAppModel(
@@ -156,6 +162,19 @@ enum SettingsScreenshotRenderer {
                 rootDirectoryURL: historyDirectory.appendingPathComponent("recordings")
             )
         )
+        var mouseModeMonitor: HIDRemoteMonitor?
+        if mouseModeState == "on", let profileID = settings.selectedRemoteProfileID {
+            let monitor = HIDRemoteMonitor(settings: settings, profileID: profileID,
+                ownsEventSuppressor: false, runtimePermissions: { true },
+                diagnosticLogger: { _ in }, mouseOutput: { _ in true })
+            monitor.onStatus = { model.configureHIDStatusForSettingsScreenshot($0) }
+            monitor.connectSimulatedDevice(fingerprint: "settings-screenshot-mouse", profileID: profileID)
+            monitor.handleSimulatedReport(reportID: 1, data: Data([0x65, 0, 0, 0, 0, 0]))
+            RunLoop.current.run(until: Date().addingTimeInterval(0.65))
+            monitor.handleSimulatedReport(reportID: 1, data: Data(repeating: 0, count: 6))
+            mouseModeMonitor = monitor
+        }
+        defer { mouseModeMonitor?.stop() }
         if showsRemoteCards {
             model.configureRemoteCardsForSettingsScreenshot(
                 profileIDs: Set(remoteCardSystemNames.keys),
@@ -194,7 +213,8 @@ enum SettingsScreenshotRenderer {
                 updateInformation: updateInformation,
                 initialSection: section,
                 initialShareSection: section == .statistics && expandsShare ? section : nil,
-                initialMappingEditingButton: section == .mapping && opensMappingEditor ? .ok : nil,
+                initialMappingEditingButton: section == .mapping && opensMappingEditor ? (opensMouseModeEditor ? .menu : .ok) : nil,
+                initialMappingEditingTrigger: opensMouseModeEditor ? .longPress : .singleClick,
                 initialShortcutPickerShowsKeyboard: showsStandardKeyboard
             ).environmentObject(localization))
             let window = NSWindow(contentRect: NSRect(origin: .zero, size: size),
@@ -225,8 +245,9 @@ enum SettingsScreenshotRenderer {
                 initialSection: section,
                 initialShareSection: section == .statistics && expandsShare ? section : nil,
                 initialMappingEditingButton: section == .mapping && opensMappingEditor
-                    ? .ok
+                    ? (opensMouseModeEditor ? .menu : .ok)
                     : nil,
+                initialMappingEditingTrigger: opensMouseModeEditor ? .longPress : .singleClick,
                 initialShortcutPickerShowsKeyboard: showsStandardKeyboard,
                 minimumContentSize: .zero
             )

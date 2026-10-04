@@ -725,6 +725,7 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
     case focusInput
     case openCustomApplication
     case toggleLongRecording
+    case toggleMouseMode
     case openCommonPhrases
     case openRemoteMic
     case openCodex
@@ -781,6 +782,7 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
         case .focusInput: return localization.text("action.focus_input")
         case .openCustomApplication: return localization.text("action.open_custom_application")
         case .openCommonPhrases: return localization.text("action.open_common_phrases")
+        case .toggleMouseMode: return localization.text("action.toggle_mouse_mode")
         case .toggleLongRecording: return localization.text("action.toggle_long_recording")
         case .openRemoteMic: return localization.text("action.open_remote_mic")
         case .openCodex: return localization.text("action.open_codex")
@@ -827,7 +829,7 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
              .deleteBackward:
             return .basicKeys
         case .showDesktop, .contextMenu, .appSwitcher, .volumeUp, .volumeDown, .volumeMute,
-             .playPause, .previousCommandLeft, .nextCommandRight, .toggleLongRecording:
+             .playPause, .previousCommandLeft, .nextCommandRight, .toggleLongRecording, .toggleMouseMode:
             return .systemAndMedia
         case .customShortcut, .combinationAction, .focusInput:
             return .custom
@@ -845,6 +847,7 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
     var allowsRepeat: Bool {
         ![
             .customShortcut,
+            .toggleMouseMode,
             .focusInput,
             .openCustomApplication,
             .commandReturn,
@@ -876,9 +879,11 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
     static func pickerActions(
         installedBundleIdentifiers: Set<String>,
         current: ButtonAction,
-        experimentalContinuousRecordingEnabled: Bool
+        experimentalContinuousRecordingEnabled: Bool,
+        supportsButtonMouseMode: Bool = false
     ) -> [ButtonAction] {
         let actions = allCases.filter { action in
+            if action == .toggleMouseMode && !supportsButtonMouseMode { return false }
             guard action.isEnabled(
                 experimentalContinuousRecordingEnabled: experimentalContinuousRecordingEnabled
             ) else {
