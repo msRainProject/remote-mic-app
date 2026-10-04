@@ -81,12 +81,7 @@ final class ButtonMouseModeController {
             return
         }
         if button == .ok {
-            clickOperationID = Self.operations.take()
-            let submitted = output(.click)
-            log("CLICK", phase: "completed",
-                result: submitted ? "submitted" : "failed", reason: submitted ? "input_posted" : "output_rejected",
-                fields: "target_result=unknown")
-            if !submitted { cancel(reason: "output_rejected") }
+            click(.click, button: "left")
             return
         }
         guard heldDirections.insert(button).inserted else { return }
@@ -110,6 +105,21 @@ final class ButtonMouseModeController {
         } else {
             step()
         }
+    }
+
+    func rightClick() {
+        guard isEnabled else { return }
+        guard permissions() else { cancel(reason: "permission_revoked"); return }
+        click(.rightClick, button: "right")
+    }
+
+    private func click(_ event: AppleSiriRemoteTouchOutput, button: String) {
+        clickOperationID = Self.operations.take()
+        let submitted = output(event)
+        log("CLICK", phase: "completed",
+            result: submitted ? "submitted" : "failed", reason: submitted ? "input_posted" : "output_rejected",
+            fields: "button=\(button) target_result=unknown")
+        if !submitted { cancel(reason: "output_rejected") }
     }
 
     func release(_ button: RemoteButton) {

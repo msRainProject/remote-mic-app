@@ -72,6 +72,7 @@ final class HIDRemoteMonitor {
     private let scheduler: HIDRemoteScheduling
     private let mouseMode: ButtonMouseModeController
     private var mouseConsumedUsages = Set<UInt16>()
+    private var mouseMenuGestureGeneration: UInt64 = 0
     private var statusBeforeMouseMode: LocalizedMessage?
     var isMouseModeEnabled: Bool { mouseMode.isEnabled }
     private let permissionPoll: HIDPermissionPoll
@@ -178,6 +179,8 @@ final class HIDRemoteMonitor {
         self.karabinerElementsInstalled = karabinerElementsInstalled
         mouseMode.onModeChanged = { [weak self] enabled in
             guard let self else { return }
+            // Pending menu gestures belong to the mode where their down edge began.
+            self.cancelButtonActions(for: [.menu])
             if enabled {
                 self.statusBeforeMouseMode = self.status
                 self.updateStatus(LocalizedMessage("button_mapping.status.mouse_mode"))
@@ -774,7 +777,8 @@ final class HIDRemoteMonitor {
                 )
                 continue
             }
-            if recognizesDoubleClick || recognizesLongPress || gestureRecognizer.isTracking(button) {
+            if recognizesDoubleClick || recognizesLongPress || gestureRecognizer.isTracking(button) ||
+                (mouseMode.isEnabled && button == .menu) {
                 let commands = gestureRecognizer.press(
                     button,
                     recognizesDoubleClick: recognizesDoubleClick,
@@ -1098,11 +1102,16 @@ final class HIDRemoteMonitor {
 
     private func scheduleDoubleClickTimeout(for button: RemoteButton) {
         doubleClickTimers.removeValue(forKey: button)?.cancel()
+        let menuGeneration = mouseMenuGestureGeneration
         let timer = scheduler.schedule(
             afterMilliseconds: HIDRemoteTiming.doubleClickMilliseconds,
             repeatingEveryMilliseconds: nil
         ) { [weak self] in
             guard let self else { return }
+            guard button != .menu || self.mouseMenuGestureGeneration == menuGeneration else {
+                self.diagnosticLogger("HID GESTURE button=menu phase=ignored result=ignored reason=stale_mouse_mode_generation")
+                return
+            }
             self.doubleClickTimers.removeValue(forKey: button)
             _ = self.processGestureCommands(self.gestureRecognizer.doubleClickTimedOut(button))
         }
@@ -1111,11 +1120,16 @@ final class HIDRemoteMonitor {
 
     private func scheduleLongPressTimeout(for button: RemoteButton) {
         longPressTimers.removeValue(forKey: button)?.cancel()
+        let menuGeneration = mouseMenuGestureGeneration
         let timer = scheduler.schedule(
             afterMilliseconds: HIDRemoteTiming.longPressMilliseconds,
             repeatingEveryMilliseconds: nil
         ) { [weak self] in
             guard let self else { return }
+            guard button != .menu || self.mouseMenuGestureGeneration == menuGeneration else {
+                self.diagnosticLogger("HID GESTURE button=menu phase=ignored result=ignored reason=stale_mouse_mode_generation")
+                return
+            }
             self.longPressTimers.removeValue(forKey: button)
             _ = self.processGestureCommands(self.gestureRecognizer.longPressTimedOut(button))
         }
@@ -1130,17 +1144,23 @@ final class HIDRemoteMonitor {
             releaseForRevokedPermissions()
             return false
         }
+        let configured = settings.configuredAction(
+            for: button,
+            trigger: trigger,
+            profileID: profileID
+        )
+        if mouseMode.isEnabled, button == .menu, trigger == .singleClick,
+           configured.action != .toggleMouseMode {
+            // Menu must wait for release/gesture resolution so a long toggle never clicks.
+            mouseMode.rightClick()
+            return true
+        }
         if overrideActionPerformer(profileID, button, trigger) {
             AppLogger.shared.write(
                 "HID BUTTON button=\(button.rawValue) trigger=\(trigger.rawValue) action=private_feature"
             )
             return true
         }
-        let configured = settings.configuredAction(
-            for: button,
-            trigger: trigger,
-            profileID: profileID
-        )
         if appSwitcherSession.isActive, button == .tv {
             return performAppSwitcherAction(for: button, trigger: trigger)
         }
@@ -1158,7 +1178,7 @@ final class HIDRemoteMonitor {
                 diagnosticLogger("HID ACTION phase=failed result=failed reason=mouse_mode_reserved_button")
                 return true
             }
-            if !mouseMode.isEnabled { cancelPointerButtonActions() }
+            if !mouseMode.isEnabled { cancelButtonActions(for: ButtonMouseModeController.controlledButtons) }
             mouseMode.toggle()
             return true
         }
@@ -1313,8 +1333,9 @@ final class HIDRemoteMonitor {
         gestureRecognizer.reset()
     }
 
-    private func cancelPointerButtonActions() {
-        for button in ButtonMouseModeController.controlledButtons {
+    private func cancelButtonActions(for buttons: Set<RemoteButton>) {
+        if buttons.contains(.menu) { mouseMenuGestureGeneration += 1 }
+        for button in buttons {
             repeatTimers.removeValue(forKey: button.hidUsage)?.cancel()
             nonRepeatableReleaseTimers.removeValue(forKey: button)?.cancel()
             nonRepeatablePressedButtons.remove(button)

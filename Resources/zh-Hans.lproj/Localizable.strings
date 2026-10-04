@@ -1238,4 +1238,4 @@
 "onboarding.voice_tool.guide.screenshot.vokie_step_2" = "在 Vokie 的通用设置中，确认麦克风使用 MiRemoteV 2ch。";
 
 "action.toggle_mouse_mode" = "切换鼠标模式";
-"button_mapping.status.mouse_mode" = "鼠标模式已开启：方向键移动，确定键点击，加减键滚动，再次切换退出";
+"button_mapping.status.mouse_mode" = "鼠标模式已开启：方向键移动，确定键左键，菜单单击右键，加减键滚动；再次切换退出";

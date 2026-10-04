@@ -1238,4 +1238,4 @@
 "onboarding.voice_tool.guide.screenshot.vokie_step_2" = "In Vokie’s General settings (通用), check that Microphone (麦克风) uses MiRemoteV 2ch.";
 
 "action.toggle_mouse_mode" = "Toggle mouse mode";
-"button_mapping.status.mouse_mode" = "Mouse mode is on: arrows move, OK clicks, +/− scroll. Toggle again to exit.";
+"button_mapping.status.mouse_mode" = "Mouse mode: arrows move, OK left-clicks, Menu right-clicks, +/− scroll. Toggle to exit.";
