@@ -18,3 +18,16 @@
 | [editor-en-light.jpg](editor-en-light.jpg) | JPEG | 1020 × 772 | `d0070a90ede4b4e324848b1b72d689bddffa1d75c47363146e56a9b0d6c3be31` |
 | [editor-zh-hans-dark.jpg](editor-zh-hans-dark.jpg) | JPEG | 1020 × 772 | `d83330db40e4b4b503c8d3e123f10a5decce1240f42a0b7261febba9dd7d6894` |
 | [editor-zh-hans-light.jpg](editor-zh-hans-light.jpg) | JPEG | 1020 × 772 | `72c02271f72392074a9efea1d25b97159727a80d9bd0aa767545558e8a991768` |
+
+## 滚轮补充证据
+
+- 2026-10-04，源码提交 `c2fea4e64d05a7c8585f796eefd502fd4c101b13`；1.9.21 / Build 228，Apple Silicon Release，本地 ad-hoc UI 检查构建。
+- 相同生产交互入口和最小 `1020 × 772` 窗口；增加中英文浅色/深色共 4 张状态截图，提示加减键滚动。逐张检查文字、对比度、导航、滚动和控件边界。新增状态提示均完整可见；本次没有修改或宣称修复之前记录的英文页头布局问题。
+- 使用隔离测试配置、HID 长按回放和注入权限/输出，不是实体遥控器、真实系统滚轮或语音验收。图像保留捕获接口返回的原始 JPEG 字节。
+
+| 文件 | 格式 | 像素尺寸 | SHA-256 |
+| --- | --- | --- | --- |
+| [scroll-active-en-dark.jpg](scroll-active-en-dark.jpg) | JPEG | 1020 × 772 | `900f71b5a7fc790c1941f8dc4a18a60072c24007f188c3d2499434ac71427dbb` |
+| [scroll-active-en-light.jpg](scroll-active-en-light.jpg) | JPEG | 1020 × 772 | `4c3c7efa67404f57c330d112616bfd44b28035a7b5bb3f9b78196c214b6c0c1a` |
+| [scroll-active-zh-hans-dark.jpg](scroll-active-zh-hans-dark.jpg) | JPEG | 1020 × 772 | `681951ae8c8899d757fb6b8c4437e01161777fe5e037e89275e18e3bd4cfba7f` |
+| [scroll-active-zh-hans-light.jpg](scroll-active-zh-hans-light.jpg) | JPEG | 1020 × 772 | `2202ae96ef27234e29ebd2e8c52fa8f157abba55357bfaaddc3b178f31c190c9` |

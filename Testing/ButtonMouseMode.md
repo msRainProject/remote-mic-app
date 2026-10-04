@@ -65,6 +65,6 @@
 - 全量回归：`swift test --disable-keychain --skip BuildSigningTests`，818 项通过；此命令沿用 Mac CI 的公开产品测试入口，未执行独立签名脚本测试。`SKIP_SWIFT_PACKAGE_BUILD=1 ./scripts/test.sh` 的 48 项自测通过。
 - 滚轮补充：31 项鼠标模式测试函数（含参数化用例）覆盖两种滚动方向、350/100 ms 连发、重复报告、相反键抵消、移动与滚动并行、全部生命周期取消、陈旧回调、原音量/双击/长按恢复、原生音量去重、双设备隔离和聚合脱敏日志；最终页面滚动方向与体感仍需真实系统验证。
 - 构建与静态检查：`swift build --disable-keychain -c release`、`CONFIGURATION=debug ./scripts/build-app.sh`、仓库边界、治理检查与 `git diff --check` 通过；本地日志保存在本次工作目录。
-- 8 张生产页面功能截图与 1 张未绑定模式的对照见[窗口证据](../Screenshots/button-mouse-mode/README.md)。中文最小窗口导航和新增控件已检查；英文开启映射时页头可裁切，对照也复现，整体 UI 验收尚未通过。
+- 初始 8 张生产页面功能截图、1 张未绑定模式的对照及滚轮增补 4 张中英文浅色/深色状态图见[窗口证据](../Screenshots/button-mouse-mode/README.md)。新增滚轮提示在生产最小窗口完整可见；初始英文开启映射时页头可裁切，对照也复现，本次不处理该既有布局问题，整体 UI 验收尚未通过。
 - 代理真实 UI 检查与截图只证明生产设置页面，不启动真实蓝牙、虚拟音频或注入鼠标事件。
 - RC001/RC003 真机、实际 CGEvent 点击、多显示器、授权恢复、语音首字/尾字及签名公证分发包均未完成，PR 必须保持 Draft。
