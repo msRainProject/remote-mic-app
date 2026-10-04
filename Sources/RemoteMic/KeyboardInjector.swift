@@ -275,6 +275,8 @@ enum KeyboardInjector {
         shortcutHardwareFlags: () -> CGEventFlags = { CGEventSource.flagsState(.hidSystemState) }
     ) -> Bool {
         guard action != .disabled else { return true }
+        // This device-local action is owned by the Xiaomi HID monitor.
+        guard action != .toggleMouseMode else { return false }
         if action.isAppInternal {
             AppLogger.shared.write("INTERNAL ACTION ignored_by_keyboard action=\(action.rawValue)")
             return true
@@ -418,7 +420,7 @@ enum KeyboardInjector {
             break
         case .openCustomApplication:
             break
-        case .toggleLongRecording, .openCommonPhrases:
+        case .toggleLongRecording, .openCommonPhrases, .toggleMouseMode:
             break
         case .openRemoteMic, .openCodex, .openClaude, .openCmux, .openWeChat, .openCursor, .openXcode,
              .openSlack, .openWeCom, .openNeteaseMusic, .openChrome, .openSafari, .openZed:

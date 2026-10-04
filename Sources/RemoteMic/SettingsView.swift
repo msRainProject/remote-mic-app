@@ -2250,7 +2250,9 @@ struct SettingsView: View {
         let actions = ButtonAction.pickerActions(
             installedBundleIdentifiers: installedBundleIdentifiers,
             current: configured.action,
-            experimentalContinuousRecordingEnabled: settings.experimentalContinuousRecordingEnabled
+            experimentalContinuousRecordingEnabled: settings.experimentalContinuousRecordingEnabled,
+            supportsButtonMouseMode: settings.selectedRemoteProfile?.model.usesPrivateAdapter != true &&
+                !ButtonMouseModeController.controlledButtons.contains(button)
         ).filter { $0 != .disabled && $0 != .combinationAction }
         let isManagedPowerAction = button == .power &&
             trigger == .singleClick &&

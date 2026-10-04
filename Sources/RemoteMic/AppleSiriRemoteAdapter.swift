@@ -682,6 +682,7 @@ enum AppleSiriRemoteTouchOutput: Equatable {
     case move(deltaX: Double, deltaY: Double)
     case scroll(pixels: Double)
     case click
+    case rightClick
 }
 
 struct AppleSiriRemoteTouchInterpreter {
@@ -901,18 +902,19 @@ enum AppleSiriRemotePointerController {
             event.setIntegerValueField(.eventSourceUserData, value: KeyboardInjector.syntheticEventMarker)
             event.post(tap: .cghidEventTap)
             return true
-        case .click:
+        case .click, .rightClick:
+            let isRightClick = output == .rightClick
             let location = CGEvent(source: nil)?.location ?? .zero
             guard let down = CGEvent(
                 mouseEventSource: source,
-                mouseType: .leftMouseDown,
+                mouseType: isRightClick ? .rightMouseDown : .leftMouseDown,
                 mouseCursorPosition: location,
-                mouseButton: .left
+                mouseButton: isRightClick ? .right : .left
             ), let up = CGEvent(
                 mouseEventSource: source,
-                mouseType: .leftMouseUp,
+                mouseType: isRightClick ? .rightMouseUp : .leftMouseUp,
                 mouseCursorPosition: location,
-                mouseButton: .left
+                mouseButton: isRightClick ? .right : .left
             ) else { return false }
             for event in [down, up] {
                 event.setIntegerValueField(

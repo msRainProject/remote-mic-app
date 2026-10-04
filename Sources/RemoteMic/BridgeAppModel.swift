@@ -2318,6 +2318,10 @@ final class BridgeAppModel: ObservableObject, XiaomiBluetoothBridgeDelegate {
                 "test_tone=\(isPlayingTestTone) audio_ready=\(isAudioOutputReady)"
         )
         guard started, changed else { return }
+        if event.isSuspending {
+            hidMonitors.values.forEach { $0.cancelMouseMode(reason: "application_suspended") }
+            discoveryHIDMonitor?.cancelMouseMode(reason: "application_suspended")
+        }
         setBluetoothSystemSuspended(
             systemAudioSuspensionState.isSuspended,
             reason: event.rawValue
@@ -5644,6 +5648,11 @@ final class BridgeAppModel: ObservableObject, XiaomiBluetoothBridgeDelegate {
     func systemDeviceName(for profile: RemoteDeviceProfile) -> String? {
         remoteSystemDeviceNames[profile.id]
             ?? RemoteDeviceNamePolicy.observedSystemName(from: profile.customName)
+    }
+
+    func configureHIDStatusForSettingsScreenshot(_ value: LocalizedMessage) {
+        guard ProcessInfo.processInfo.environment["REMOTE_MIC_SETTINGS_SCREENSHOT_DIR"] != nil else { return }
+        hidStatus = value
     }
 
     func configureRemoteCardsForSettingsScreenshot(

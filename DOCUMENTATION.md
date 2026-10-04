@@ -31,6 +31,7 @@
 - 平台附件使用 `feature/<feature>/platform-<platform>.md`，只能映射平台差异。当前 Onboarding 附件为：
   - [`feature/first-run-onboarding/platform-macos.md`](feature/first-run-onboarding/platform-macos.md)
   - [`feature/first-run-onboarding/platform-windows.md`](feature/first-run-onboarding/platform-windows.md)
+- 遥控器鼠标模式的公开行为见 [`feature/button-mouse-mode/PRODUCT_SPEC.md`](feature/button-mouse-mode/PRODUCT_SPEC.md)，当前 macOS 小米源码候选，真实设备验证见 [`Testing/ButtonMouseMode.md`](Testing/ButtonMouseMode.md)。
 - 当前跨硬件行为合同为 [`Testing/HardwareCompatibilityContract.md`](Testing/HardwareCompatibilityContract.md) 和 [`Testing/HardwareVoiceAudioContract.md`](Testing/HardwareVoiceAudioContract.md)。
 - 功能目录结构和档案入口见 [`feature/README.md`](feature/README.md)。
 

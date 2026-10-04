@@ -118,6 +118,10 @@ struct RemoteButtonGestureRecognizer {
         return [.trigger(button, .longPress)]
     }
 
+    mutating func cancel(_ button: RemoteButton) {
+        states.removeValue(forKey: button)
+    }
+
     mutating func reset() {
         states.removeAll()
     }
