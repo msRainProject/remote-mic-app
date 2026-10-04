@@ -31,3 +31,17 @@
 | [scroll-active-en-light.jpg](scroll-active-en-light.jpg) | JPEG | 1020 × 772 | `4c3c7efa67404f57c330d112616bfd44b28035a7b5bb3f9b78196c214b6c0c1a` |
 | [scroll-active-zh-hans-dark.jpg](scroll-active-zh-hans-dark.jpg) | JPEG | 1020 × 772 | `681951ae8c8899d757fb6b8c4437e01161777fe5e037e89275e18e3bd4cfba7f` |
 | [scroll-active-zh-hans-light.jpg](scroll-active-zh-hans-light.jpg) | JPEG | 1020 × 772 | `2202ae96ef27234e29ebd2e8c52fa8f157abba55357bfaaddc3b178f31c190c9` |
+
+## 右键补充证据
+
+- 2026-10-04，源码提交 `666b6dea67ff0a37de011a39220fff21fd7e16fb`；1.9.21 / Build 228，Apple Silicon Release 本地 ad-hoc UI 检查构建。
+- 相同生产交互入口，真实窗口为最小/默认 `1020 × 772` points；本次捕获接口输出为 Retina 原始 `2040 × 1544` JPEG，与旧图的像素密度不同，未缩放或重新压缩。
+- 中英文浅色/深色共 4 张，逐张检查新增菜单右键提示、退出方法、字号、对比度、导航和滚动边界，状态文案完整可见。原绑定仍显示普通模式动作，开启状态解释临时接管。没有改动或宣称修复历史英文页头问题。
+- 使用隔离配置、HID 长按回放和注入权限/输出；这些图不证明实际遥控器右键、蓝牙、系统权限或语音验收。
+
+| 文件 | 格式 | 像素尺寸 | SHA-256 |
+| --- | --- | --- | --- |
+| [right-click-active-en-dark.jpg](right-click-active-en-dark.jpg) | JPEG | 2040 × 1544 | `64b56599c24c64d177db7547eb0fafc005bc89cfcbf60b853834164be327539f` |
+| [right-click-active-en-light.jpg](right-click-active-en-light.jpg) | JPEG | 2040 × 1544 | `c0d468a15788feab98a99174c9ffd0f74571a58ac59642856f4047db3a5cd464` |
+| [right-click-active-zh-hans-dark.jpg](right-click-active-zh-hans-dark.jpg) | JPEG | 2040 × 1544 | `7371e4097c39dc1e655771bf780175c4e4b1475d21c3d2dbde51280d7146ffa5` |
+| [right-click-active-zh-hans-light.jpg](right-click-active-zh-hans-light.jpg) | JPEG | 2040 × 1544 | `be27696c9e5d4e34508b239ec9beea1dfd04683a967e9ad250015cac5c5a3db3` |
