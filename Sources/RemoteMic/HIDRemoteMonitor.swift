@@ -159,6 +159,7 @@ final class HIDRemoteMonitor {
             KeyboardInjector.send(
                 configured.action,
                 shortcut: configured.shortcut,
+                keySequence: configured.keySequence,
                 applicationProfile: settings.customApplicationProfile(
                     id: configured.applicationProfileID
                 )
@@ -1133,9 +1134,9 @@ final class HIDRemoteMonitor {
                 "HID ACTION failed button=\(button.rawValue) trigger=\(trigger.rawValue) " +
                     "action=\(configured.action.rawValue)"
             )
-            // A library rejection is not evidence of revoked Accessibility permission.
+            // A parameterized action rejection is not evidence of revoked Accessibility permission.
             // Preserve the held edge so duplicate reports cannot restart the action.
-            if configured.action == .combinationAction { return false }
+            if configured.action == .combinationAction || configured.action == .keySequence { return false }
             stop()
             updateStatus(LocalizedMessage("button_mapping.permission.accessibility_expired"))
             return false

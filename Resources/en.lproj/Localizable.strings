@@ -1236,3 +1236,12 @@
 "onboarding.voice_tool.guide.screenshot.system_fn" = "In System Settings → Keyboard (键盘), set Press Globe key to (按下🌐键时) to Do Nothing (不执行任何操作).";
 "onboarding.voice_tool.guide.screenshot.vokie_step_1" = "On Vokie’s Home page (首页), set Standard Input (普通输入) to Fn.";
 "onboarding.voice_tool.guide.screenshot.vokie_step_2" = "In Vokie’s General settings (通用), check that Microphone (麦克风) uses MiRemoteV 2ch.";
+
+/* Native key sequences */
+"action.key_sequence" = "Key Sequence";
+"key_sequence.clear" = "Clear Sequence";
+"key_sequence.help" = "Select keys below to press and release them in order. Reorder or remove steps; changes save automatically. Focus the target input field before triggering.";
+"key_sequence.empty" = "No keys added. An empty sequence does nothing.";
+"key_sequence.move_up" = "Move Step Up";
+"key_sequence.move_down" = "Move Step Down";
+"key_sequence.remove" = "Remove Step";

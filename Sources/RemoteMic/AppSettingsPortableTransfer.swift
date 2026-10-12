@@ -67,6 +67,8 @@ extension AppSettings {
         case .customShortcut:
             guard let s = c.shortcut else { throw PortableTransferError.missingDependency("快捷键") }
             return .init(kind: .shortcut, referenceID: Self.shortcutID(s))
+        case .keySequence:
+            throw PortableTransferError.invalid("顺序按键暂不支持便携导出，请使用本机配置备份")
         case .combinationAction:
             guard let id = c.macroID else { throw PortableTransferError.missingDependency("组合动作") }
             return .init(kind: .macro, referenceID: id)

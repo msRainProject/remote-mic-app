@@ -1236,3 +1236,12 @@
 "onboarding.voice_tool.guide.screenshot.system_fn" = "在系统设置的键盘中，将按下🌐键时设为不执行任何操作。";
 "onboarding.voice_tool.guide.screenshot.vokie_step_1" = "在 Vokie 首页，将普通输入快捷键设为 Fn。";
 "onboarding.voice_tool.guide.screenshot.vokie_step_2" = "在 Vokie 的通用设置中，确认麦克风使用 MiRemoteV 2ch。";
+
+/* Native key sequences */
+"action.key_sequence" = "顺序按键";
+"key_sequence.clear" = "清空序列";
+"key_sequence.help" = "在下方点选按键，按添加顺序逐个按下并松开。可调整顺序或删除步骤，修改会自动保存；请先将光标放在目标输入框。";
+"key_sequence.empty" = "尚未添加按键；空序列不会执行。";
+"key_sequence.move_up" = "上移步骤";
+"key_sequence.move_down" = "下移步骤";
+"key_sequence.remove" = "删除步骤";

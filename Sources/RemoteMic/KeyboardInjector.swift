@@ -253,6 +253,7 @@ enum KeyboardInjector {
     static func send(
         _ action: ButtonAction,
         shortcut: CustomKeyboardShortcut? = nil,
+        keySequence: [CustomKeyboardShortcut]? = nil,
         applicationProfile: CustomApplicationProfile? = nil,
         applicationURL: (String) -> URL? = {
             if $0 == PresetApplication.remoteMic.bundleIdentifier {
@@ -312,6 +313,12 @@ enum KeyboardInjector {
         if action == .customShortcut, shortcut == nil {
             AppLogger.shared.write("SHORTCUT ACTION ignored reason=not_configured")
             return true
+        }
+        if action == .keySequence {
+            return KeyboardKeySequence.send(
+                keySequence, accessibilityTrusted: accessibilityTrusted,
+                hardwareFlags: shortcutHardwareFlags, eventPoster: shortcutEventPoster
+            )
         }
         guard accessibilityTrusted() else { return false }
 
@@ -380,6 +387,8 @@ enum KeyboardInjector {
             systemKeyPoster(18)
         case .nextCommandRight:
             systemKeyPoster(17)
+        case .keySequence:
+            return false // Executed as a complete transaction above.
         case .combinationAction:
             return false // The host action-library adapter owns execution.
         case .customShortcut:

@@ -3377,6 +3377,47 @@ struct RemoteButtonsTests {
         #expect(RemotePowerState.charging.logValue == "charging")
         #expect(RemotePowerState.unknown.logValue == "unknown")
     }
+    @Test func menuDoubleClickRunsOneNativeSequenceAndDisconnectCancelsPendingClick() throws {
+        let suite = "MenuKeySequence.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AppSettings(defaults: defaults)
+        settings.customMappingEnabled = true
+        let profile = try #require(settings.selectedRemoteProfileID)
+        let keys = [CustomKeyboardShortcut(keyCode: 18, modifierFlags: [], keyLabel: "1"),
+                    CustomKeyboardShortcut(keyCode: 36, modifierFlags: [], keyLabel: "Return")]
+        settings.setBaseBinding(.init(action: .keySequence, shortcut: nil, keySequence: keys),
+            for: .menu, trigger: .doubleClick, profileID: profile)
+        let scheduler = RemoteButtonsTestScheduler()
+        var triggers: [ButtonTrigger] = []
+        var edges: [ShortcutLifecycleTests.Edge] = []
+        let monitor = HIDRemoteMonitor(settings: settings, profileID: profile,
+            ownsEventSuppressor: false, scheduler: scheduler, runtimePermissions: { true },
+            actionPerformer: { _, trigger, configured in
+                triggers.append(trigger)
+                return KeyboardKeySequence.send(configured.keySequence, accessibilityTrusted: { true },
+                    hardwareFlags: { [] }, eventPoster: { edges.append(.init($0)); return true },
+                    frontmostProcess: { 10 }, logger: { _ in })
+            })
+        monitor.connectSimulatedDevice(fingerprint: "sequence-test", profileID: profile)
+        let press = Data([UInt8(RemoteButton.menu.hidUsage), 0, 0, 0, 0, 0])
+        let release = Data(repeating: 0, count: 6)
+        monitor.handleSimulatedReport(reportID: 1, data: press)
+        monitor.handleSimulatedReport(reportID: 1, data: release)
+        #expect(edges.isEmpty)
+        monitor.handleSimulatedReport(reportID: 1, data: press)
+        monitor.handleSimulatedReport(reportID: 1, data: press) // Duplicate HID report.
+        monitor.handleSimulatedReport(reportID: 1, data: release)
+        scheduler.advance(toMilliseconds: 1000)
+        #expect(triggers == [.doubleClick])
+        #expect(edges.map(\.code) == [18, 18, 36, 36])
+        monitor.handleSimulatedReport(reportID: 1, data: press)
+        monitor.handleSimulatedReport(reportID: 1, data: release)
+        monitor.disconnectSimulatedDevice()
+        scheduler.advance(toMilliseconds: 2000)
+        #expect(triggers == [.doubleClick])
+    }
+
 }
 
 private final class RemoteButtonsTestScheduler: HIDRemoteScheduling {

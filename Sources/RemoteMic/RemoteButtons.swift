@@ -512,17 +512,20 @@ struct ConfiguredButtonAction: Codable, Equatable {
     var shortcut: CustomKeyboardShortcut?
     var applicationProfileID: UUID?
     var macroID: String?
+    var keySequence: [CustomKeyboardShortcut]?
 
     init(
         action: ButtonAction,
         shortcut: CustomKeyboardShortcut?,
         applicationProfileID: UUID? = nil,
-        macroID: String? = nil
+        macroID: String? = nil,
+        keySequence: [CustomKeyboardShortcut]? = nil
     ) {
         self.action = action
         self.shortcut = shortcut
         self.applicationProfileID = applicationProfileID
         self.macroID = macroID
+        self.keySequence = keySequence
     }
 
     static let disabled = ConfiguredButtonAction(action: .disabled, shortcut: nil)
@@ -721,6 +724,7 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
     case previousCommandLeft
     case nextCommandRight
     case customShortcut
+    case keySequence
     case combinationAction
     case focusInput
     case openCustomApplication
@@ -777,6 +781,7 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
         case .previousCommandLeft: return localization.text("action.previous_command_left")
         case .nextCommandRight: return localization.text("action.next_command_right")
         case .combinationAction: return localization.text("action.combination_action")
+        case .keySequence: return localization.text("action.key_sequence")
         case .customShortcut: return localization.text("action.custom_shortcut")
         case .focusInput: return localization.text("action.focus_input")
         case .openCustomApplication: return localization.text("action.open_custom_application")
@@ -829,7 +834,7 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
         case .showDesktop, .contextMenu, .appSwitcher, .volumeUp, .volumeDown, .volumeMute,
              .playPause, .previousCommandLeft, .nextCommandRight, .toggleLongRecording:
             return .systemAndMedia
-        case .customShortcut, .combinationAction, .focusInput:
+        case .customShortcut, .keySequence, .combinationAction, .focusInput:
             return .custom
         case .openCommonPhrases:
             return .commonPhrases
@@ -845,6 +850,7 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
     var allowsRepeat: Bool {
         ![
             .customShortcut,
+            .keySequence,
             .focusInput,
             .openCustomApplication,
             .commandReturn,

@@ -1635,13 +1635,9 @@ final class AppSettings: ObservableObject {
         }
 
         var bindings = secondaryButtonBindings[button] ?? [:]
-        let shortcut = bindings[trigger]?.shortcut
-        let applicationProfileID = bindings[trigger]?.applicationProfileID
-        bindings[trigger] = ConfiguredButtonAction(
-            action: action,
-            shortcut: shortcut,
-            applicationProfileID: applicationProfileID
-        )
+        var configured = bindings[trigger] ?? .disabled
+        configured.action = action
+        bindings[trigger] = configured
         secondaryButtonBindings[button] = bindings.isEmpty ? nil : bindings
     }
 
@@ -2355,10 +2351,17 @@ final class AppSettings: ObservableObject {
         if binding.action == .combinationAction {
             guard let id = binding.macroID, id.range(of: "^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$", options: .regularExpression) != nil else { return nil }
         }
-        guard let shortcut = binding.shortcut else { return binding }
-        guard let validated = validatedShortcut(shortcut) else { return nil }
         var result = binding
-        result.shortcut = validated
+        if let keys = binding.keySequence {
+            guard let validated = KeyboardKeySequence.validated(keys) else { return nil }
+            result.keySequence = validated
+        } else if binding.action == .keySequence {
+            return nil
+        }
+        if let shortcut = binding.shortcut {
+            guard let validated = validatedShortcut(shortcut) else { return nil }
+            result.shortcut = validated
+        }
         return result
     }
 
