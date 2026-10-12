@@ -359,6 +359,7 @@ struct KeyboardShortcutPicker: View {
 
     let shortcut: CustomKeyboardShortcut?
     let onSelect: (CustomKeyboardShortcut) -> Void
+    let allowsStandaloneModifiers: Bool
 
     @EnvironmentObject private var localization: LocalizationStore
     @State private var selectionMode: SelectionMode = .presets
@@ -367,10 +368,12 @@ struct KeyboardShortcutPicker: View {
     init(
         shortcut: CustomKeyboardShortcut?,
         showsStandardKeyboardInitially: Bool = false,
+        allowsStandaloneModifiers: Bool = true,
         onSelect: @escaping (CustomKeyboardShortcut) -> Void
     ) {
         self.shortcut = shortcut
         self.onSelect = onSelect
+        self.allowsStandaloneModifiers = allowsStandaloneModifiers
         _selectionMode = State(
             initialValue: showsStandardKeyboardInitially ? .keyboard : .presets
         )
@@ -469,7 +472,7 @@ struct KeyboardShortcutPicker: View {
                 titleKey: "shortcut.picker.keyboard.number_pad",
                 rows: StandardKeyboardKey.numberPadRows
             )
-            standaloneModifierSection
+            if allowsStandaloneModifiers { standaloneModifierSection }
         }
     }
 

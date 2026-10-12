@@ -6106,6 +6106,7 @@ final class BridgeAppModel: ObservableObject, XiaomiBluetoothBridgeDelegate {
         let handled = KeyboardInjector.send(
             configured.action,
             shortcut: configured.shortcut,
+            keySequence: configured.keySequence,
             applicationProfile: applicationProfile
         )
         if !handled, let requestID {

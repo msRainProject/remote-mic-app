@@ -53,7 +53,10 @@ enum SettingsScreenshotRenderer {
         let opensActionEditor = ProcessInfo.processInfo.environment[
             "REMOTE_MIC_SETTINGS_SCREENSHOT_OPEN_ACTION_EDITOR"
         ] == "1"
-        let opensMappingEditor = opensShortcutEditor || opensActionEditor
+        let opensKeySequenceEditor = ProcessInfo.processInfo.environment[
+            "REMOTE_MIC_SETTINGS_SCREENSHOT_KEY_SEQUENCE"
+        ] == "1"
+        let opensMappingEditor = opensShortcutEditor || opensActionEditor || opensKeySequenceEditor
         let showsStandardKeyboard = ProcessInfo.processInfo.environment[
             "REMOTE_MIC_SETTINGS_SCREENSHOT_SHORTCUT_MODE"
         ] == "keyboard"
@@ -144,6 +147,15 @@ enum SettingsScreenshotRenderer {
                 trigger: .singleClick
             )
         }
+        if opensKeySequenceEditor {
+            settings.customMappingEnabled = true
+            let keys = zip([UInt16(18), 19, 20, 21, 36], ["1", "2", "3", "4", "Return"]).map {
+                CustomKeyboardShortcut(keyCode: $0.0, modifierFlags: [], keyLabel: $0.1)
+            }
+            settings.setBaseBinding(ConfiguredButtonAction(action: .keySequence, shortcut: nil,
+                keySequence: keys), for: .menu, trigger: .doubleClick,
+                profileID: settings.selectedRemoteProfileID)
+        }
         seedStatisticsForScreenshot(settings)
         let historyDirectory = outputDirectory.appendingPathComponent(UUID().uuidString)
         let model = BridgeAppModel(
@@ -194,7 +206,8 @@ enum SettingsScreenshotRenderer {
                 updateInformation: updateInformation,
                 initialSection: section,
                 initialShareSection: section == .statistics && expandsShare ? section : nil,
-                initialMappingEditingButton: section == .mapping && opensMappingEditor ? .ok : nil,
+                initialMappingEditingButton: section == .mapping && opensMappingEditor ? (opensKeySequenceEditor ? .menu : .ok) : nil,
+                initialMappingEditingTrigger: opensKeySequenceEditor ? .doubleClick : .singleClick,
                 initialShortcutPickerShowsKeyboard: showsStandardKeyboard
             ).environmentObject(localization))
             let window = NSWindow(contentRect: NSRect(origin: .zero, size: size),
@@ -225,8 +238,9 @@ enum SettingsScreenshotRenderer {
                 initialSection: section,
                 initialShareSection: section == .statistics && expandsShare ? section : nil,
                 initialMappingEditingButton: section == .mapping && opensMappingEditor
-                    ? .ok
+                    ? (opensKeySequenceEditor ? .menu : .ok)
                     : nil,
+                initialMappingEditingTrigger: opensKeySequenceEditor ? .doubleClick : .singleClick,
                 initialShortcutPickerShowsKeyboard: showsStandardKeyboard,
                 minimumContentSize: .zero
             )

@@ -19,7 +19,7 @@ enum ShortcutEventSequence {
         let sideSpecific: Bool
     }
 
-    private static let lock = NSLock()
+    private static let lock = NSRecursiveLock()
     // Existing saved combinations have no modifier side. Use left keys without
     // changing their persisted representation; standalone modifiers keep their path.
     private static let modifierFamilies: [ModifierFamily] = [
@@ -81,6 +81,13 @@ enum ShortcutEventSequence {
                 sideSpecific: leftIsSpecific
             )
         }
+    }
+
+    /// Serialize a multi-key action with individual shortcut transactions.
+    static func withTransaction<T>(_ body: () -> T) -> T {
+        lock.lock()
+        defer { lock.unlock() }
+        return body()
     }
 
     static func post(_ event: CGEvent) -> Bool {

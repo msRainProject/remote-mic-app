@@ -78,11 +78,12 @@ struct ButtonBindingConfigurationTests {
         #expect(settings.action(for: .home) == .commandCopy)
     }
 
-    @Test func rejectedMacroDoesNotReleaseHIDOrInventPermissionFailure() throws {
+    @Test(arguments: [ButtonAction.combinationAction, .keySequence])
+    func rejectedParameterizedActionDoesNotReleaseHIDOrInventPermissionFailure(_ action: ButtonAction) throws {
         let settings = settings()
         settings.customMappingEnabled = true
         let profileID = try #require(settings.selectedRemoteProfileID)
-        settings.setBaseBinding(ConfiguredButtonAction(action: .combinationAction, shortcut: nil, macroID: "macro.deleted"),
+        settings.setBaseBinding(ConfiguredButtonAction(action: action, shortcut: nil, macroID: "macro.deleted"),
             for: .ok, trigger: .singleClick, profileID: profileID)
         var attempts = 0
         var logs: [String] = []

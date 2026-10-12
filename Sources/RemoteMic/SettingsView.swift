@@ -2288,6 +2288,15 @@ struct SettingsView: View {
                 )
             }
 
+            if configured.action == .keySequence {
+                KeySequenceEditor(keys: configured.keySequence ?? []) { keys in
+                    var updated = configured
+                    updated.keySequence = keys.isEmpty ? nil : keys
+                    saveMappingBinding(updated, button: button, trigger: trigger)
+                    AppLogger.shared.write("KEY SEQUENCE configuration_saved step_count=\(keys.count)")
+                }
+            }
+
             if configured.action == .openCustomApplication {
                 customApplicationEditor(
                     button: button,
@@ -2970,6 +2979,9 @@ struct SettingsView: View {
         if configured.action == .customShortcut, let shortcut = configured.shortcut {
             return shortcut.visualDisplayName(using: localization)
         }
+        if configured.action == .keySequence, let keys = configured.keySequence, !keys.isEmpty {
+            return keys.map { $0.visualDisplayName(using: localization) }.joined(separator: " → ")
+        }
         if configured.action == .openCustomApplication {
             return settings.customApplicationProfile(id: configured.applicationProfileID)?.displayName
                 ?? localization.text("custom_application.not_configured")
@@ -2994,7 +3006,7 @@ struct SettingsView: View {
             current: .disabled,
             experimentalContinuousRecordingEnabled: settings.experimentalContinuousRecordingEnabled
         ).filter {
-            $0 != .disabled && $0 != .customShortcut && $0 != .openCustomApplication && $0 != .combinationAction
+            $0 != .disabled && $0 != .customShortcut && $0 != .keySequence && $0 != .openCustomApplication && $0 != .combinationAction
         }
         return ButtonActionCategory.allCases.compactMap { category in
             let actions: [ButtonProfileHostAction] = availableActions
